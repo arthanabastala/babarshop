@@ -15,13 +15,6 @@
       .slot-btn {
         transition: all 0.3s ease;
       }
-      .slot-btn.selected {
-        background-color: #dc2626; /* red-600 */
-        border-color: #ef4444; /* red-500 */
-        color: white;
-        transform: scale(1.05);
-        box-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
-      }
       .slot-btn.full {
         background-color: rgba(24, 24, 27, 0.5); /* zinc-950/50 */
         border-color: rgba(39, 39, 42, 0.3); /* zinc-800/30 */
@@ -37,6 +30,13 @@
       .slot-btn.available:hover {
         background-color: #27272a; /* zinc-800 */
         border-color: #52525b; /* zinc-600 */
+      }
+      .slot-btn.selected {
+        background-color: #dc2626 !important; /* red-600 */
+        border-color: #ef4444 !important; /* red-500 */
+        color: white !important;
+        transform: scale(1.05);
+        box-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
       }
     </style>
   </head>
@@ -269,7 +269,7 @@
       // 1. Inisialisasi Firebase Web SDK (ES Modules, CDN)
       // =========================================================================
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-      import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+      import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
       // Config Firebase
       const firebaseConfig = {
@@ -303,13 +303,29 @@
       const bookingListContainer = document.getElementById('booking-list');
       const btnRefresh = document.getElementById('btn-refresh');
 
+      // Helper untuk mendapatkan Date hari ini format YYYY-MM-DD
+      const getLocalYMD = () => {
+        const d = new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
       // Set min date hari ini
-      const today = new Date().toISOString().split('T')[0];
-      dateInput.min = today;
+      dateInput.min = getLocalYMD();
 
       // =========================================================================
       // 3. System Functions (Fetch, Render)
       // =========================================================================
+
+      // Helper untuk mengecek apakah waktu (tanggal & jam) sudah terlewat
+      const isSlotPassed = (dateStr, timeStr) => {
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const slotDate = new Date(year, month - 1, day, hours, minutes);
+        return slotDate < new Date();
+      };
 
       // generateTimeSlots
       const generateTimeSlots = () => {
@@ -356,12 +372,17 @@
             allBookings.push({ id: doc.id, ...doc.data() });
           });
 
-          // Urutkan List (Data terbaru dulu beradasarkan Tanggal lalu Jam)
+          // Urutkan List (Jadwal paling dekat/baru di atas)
           allBookings.sort((a, b) => {
-            if (a.date === b.date) {
-               return b.time.localeCompare(a.time); 
-            }
-            return new Date(b.date) - new Date(a.date);
+            const [yearA, monthA, dayA] = a.date.split('-').map(Number);
+            const [hoursA, minutesA] = a.time.split(':').map(Number);
+            const dateA = new Date(yearA, monthA - 1, dayA, hoursA, minutesA);
+            
+            const [yearB, monthB, dayB] = b.date.split('-').map(Number);
+            const [hoursB, minutesB] = b.time.split(':').map(Number);
+            const dateB = new Date(yearB, monthB - 1, dayB, hoursB, minutesB);
+            
+            return dateA - dateB; // Sorting dari yang paling awal
           });
 
           if (allBookings.length === 0) {
@@ -372,7 +393,17 @@
           bookingListContainer.innerHTML = '';
           allBookings.forEach(booking => {
             const item = document.createElement('div');
-            item.className = "hover:bg-zinc-900/50 transition-colors p-4";
+            
+            // Cek apakah status sudah selesai berdasarkan waktu
+            const isPast = isSlotPassed(booking.date, booking.time);
+            
+            // Tampilan styling tergantung dari waktu (Selesai/Menunggu)
+            const opacityStyle = isPast ? 'opacity-60 grayscale-[50%]' : 'opacity-100';
+            const statusLabel = isPast ? 'Selesai' : 'Menunggu';
+            const statusBg = isPast ? 'bg-zinc-800/80 text-zinc-400 border-zinc-700' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
+            const dotClass = isPast ? 'bg-zinc-500 hidden md:block' : 'bg-emerald-500 shadow-[0_0_5px_#10b981]';
+
+            item.className = `hover:bg-zinc-900/50 transition-colors p-4 ${opacityStyle}`;
             
             // Format Tanggal
             const dateObj = new Date(booking.date);
@@ -385,7 +416,7 @@
                 <!-- Baris 1 / Desktop Kolom 1 -->
                 <div class="flex justify-between md:block items-start gap-4">
                   <div class="min-w-0">
-                    <div class="font-medium text-zinc-200 capitalize truncate">${booking.name}</div>
+                    <div class="font-medium text-zinc-200 capitalize truncate ${isPast ? 'line-through decoration-zinc-600' : ''}">${booking.name}</div>
                     <div class="text-xs text-zinc-500 mt-0.5">${booking.age} Tahun</div>
                   </div>
                   <!-- Tampil di HP -->
@@ -411,16 +442,52 @@
                   </div>
 
                   <!-- Status -->
-                  <div>
-                    <div class="flex items-center gap-1.5 text-[11px] md:text-xs text-emerald-500 bg-emerald-500/10 md:bg-transparent px-2 md:px-0 py-1 md:py-0 rounded border border-emerald-500/20 md:border-transparent">
-                      <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_#10b981]"></div> <span class="font-medium md:font-normal">Sukses</span>
+                  <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-1.5 text-[11px] md:text-xs px-2 md:px-0 py-1 md:py-0 rounded border md:border-transparent ${statusBg}">
+                      <div class="w-1.5 h-1.5 rounded-full ${dotClass}"></div> <span class="font-medium md:font-normal">${statusLabel}</span>
                     </div>
+                    ${!isPast ? `
+                      <button class="btn-cancel flex items-center gap-1 text-[11px] bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20 px-2 py-1 rounded transition-colors ml-auto" data-id="${booking.id}">
+                        Batal
+                      </button>
+                    ` : ''}
                   </div>
                 </div>
 
               </div>
             `;
             bookingListContainer.appendChild(item);
+
+            // Event listener untuk tombol batal
+            if (!isPast) {
+              const cancelBtn = item.querySelector('.btn-cancel');
+              cancelBtn.addEventListener('click', async () => {
+                if(confirm('Yakin ingin membatalkan jadwal milik ' + booking.name + ' pada jam ' + booking.time + '?')) {
+                  try {
+                    cancelBtn.textContent = '...';
+                    cancelBtn.disabled = true;
+                    
+                    // Hapus data booking dari firestore
+                    await deleteDoc(doc(db, 'bookings', booking.id));
+                    
+                    // Refresh data di tabel bagian bawah
+                    fetchAllBookings();
+                    
+                    // Refresh slot di form jika tanggal yang sedang dilihat = tanggal yang dihapus
+                    if (dateInput.value === booking.date) {
+                      const baseSlots = generateTimeSlots(); 
+                      bookedSlots = await getBookedSlots(booking.date); 
+                      renderTimeSlots(baseSlots, bookedSlots, booking.date);
+                    }
+                  } catch (e) {
+                    console.error(e);
+                    alert('Gagal membatalkan. Silakan check koneksi internet atau console.');
+                    cancelBtn.textContent = 'Batal';
+                    cancelBtn.disabled = false;
+                  }
+                }
+              });
+            }
           });
         } catch (error) {
           console.error("Gagal memuat list booking:", error);
@@ -430,7 +497,7 @@
       };
 
       // renderTimeSlots: Render HTML UI Grid Slot Waktu
-      const renderTimeSlots = (baseSlots, bookedSlots) => {
+      const renderTimeSlots = (baseSlots, bookedSlots, selectedDate) => {
         timeSlotsContainer.innerHTML = '';
         
         if (baseSlots.length === 0) {
@@ -440,19 +507,26 @@
 
         baseSlots.forEach((slot) => {
           const isFull = bookedSlots.includes(slot);
+          const isPast = selectedDate ? isSlotPassed(selectedDate, slot) : false;
           
           const button = document.createElement('button');
           button.type = 'button';
           button.textContent = slot;
           button.dataset.time = slot; 
           
-          button.className = `slot-btn py-3 rounded-xl text-sm font-medium border text-center select-none ${isFull ? 'full' : 'available'}`;
-          
-          if (isFull) {
+          if (isPast) {
+            // State: Terlewat (Past Time)
+            button.className = `py-3 rounded-xl text-sm font-medium border text-center select-none bg-zinc-950/20 border-zinc-900 text-zinc-800 cursor-not-allowed line-through`;
+            button.disabled = true;
+          } else if (isFull) {
+            // State: Penuh (Booked)
+            button.className = `slot-btn py-3 rounded-xl text-sm font-medium border text-center select-none full`;
             button.disabled = true;
           } else {
+            // State: Tersedia (Available)
+            button.className = `slot-btn py-3 rounded-xl text-sm font-medium border text-center select-none available`;
             button.addEventListener('click', () => {
-              const allButtons = timeSlotsContainer.querySelectorAll('button');
+              const allButtons = timeSlotsContainer.querySelectorAll('button.available');
               allButtons.forEach(btn => btn.classList.remove('selected'));
               
               button.classList.add('selected');
@@ -489,7 +563,7 @@
         const baseSlots = generateTimeSlots(); 
         bookedSlots = await getBookedSlots(selectedDate); 
         
-        renderTimeSlots(baseSlots, bookedSlots);
+        renderTimeSlots(baseSlots, bookedSlots, selectedDate);
       });
 
       // Submit Form Booking

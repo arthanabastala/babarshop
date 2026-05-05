@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Booking Barbershop</title>
+    <!-- Tailwind CSS (Menggunakan built-in Vite environment) -->
+    <link rel="stylesheet" href="/src/index.css" />
+    <!-- Icons dari CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      html { scroll-behavior: smooth; }
+      
+      /* Styling state untuk tombol slot jam */
+      .slot-btn {
+        transition: all 0.3s ease;
+      }
+      .slot-btn.selected {
+        background-color: #dc2626; /* red-600 */
+        border-color: #ef4444; /* red-500 */
+        color: white;
+        transform: scale(1.05);
+        box-shadow: 0 0 20px rgba(220, 38, 38, 0.3);
+      }
+      .slot-btn.full {
+        background-color: rgba(24, 24, 27, 0.5); /* zinc-950/50 */
+        border-color: rgba(39, 39, 42, 0.3); /* zinc-800/30 */
+        color: #52525b; /* zinc-600 */
+        cursor: not-allowed;
+      }
+      .slot-btn.available {
+        background-color: #09090b; /* zinc-950 */
+        border-color: #27272a; /* zinc-800 */
+        color: #d4d4d8; /* zinc-300 */
+        cursor: pointer;
+      }
+      .slot-btn.available:hover {
+        background-color: #27272a; /* zinc-800 */
+        border-color: #52525b; /* zinc-600 */
+      }
+    </style>
+  </head>
+  <body class="bg-zinc-950 text-zinc-100 font-sans selection:bg-red-500/30 overflow-x-hidden">
+    
+    <!-- 1. HERO SECTION -->
+    <section class="relative h-screen flex flex-col items-center justify-center text-center px-4 overflow-hidden">
+      <!-- Background Effects -->
+      <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900 via-zinc-950 to-zinc-950 -z-10"></div>
+      
+      <div class="mb-8 p-4 bg-zinc-900/50 rounded-full border border-zinc-800 shadow-[0_0_50px_rgba(220,38,38,0.1)]">
+        <i data-lucide="scissors" class="text-red-500 w-12 h-12 md:w-16 md:h-16"></i>
+      </div>
+
+      <h1 class="text-5xl md:text-7xl font-bold tracking-tighter text-white mb-6 animate-fade-in-up">
+        Potongan Rapi <br class="hidden md:block"/>
+        <span class="text-red-500">Tanpa Antri</span>
+      </h1>
+
+      <p class="text-lg md:text-xl text-zinc-400 mb-10 max-w-lg">
+        Booking sekarang, datang tinggal duduk. Pengalaman cukur premium untuk gaya terbaikmu.
+      </p>
+
+      <button id="btn-scroll-booking" class="group relative inline-flex items-center justify-center gap-2 bg-red-600 text-white px-8 py-4 text-lg font-semibold rounded-full overflow-hidden transition-transform hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(220,38,38,0.3)] hover:shadow-[0_0_60px_rgba(220,38,38,0.5)]">
+        <span class="relative z-10">Booking Sekarang</span>
+        <i data-lucide="chevron-down" class="relative z-10 w-5 h-5 group-hover:translate-y-1 transition-transform"></i>
+      </button>
+    </section>
+
+    <!-- 2. INFO SECTION -->
+    <section class="py-24 px-4 bg-zinc-900/30 border-y border-zinc-800/50">
+      <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+        
+        <div class="flex flex-col items-center text-center p-8 rounded-3xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-colors">
+          <div class="w-16 h-16 rounded-2xl bg-zinc-950 border border-zinc-800 flex items-center justify-center mb-6 text-red-500 shadow-inner">
+            <i data-lucide="clock" class="w-8 h-8"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-3 text-white">Tanpa Antri</h3>
+          <p class="text-zinc-400">Jadwal pasti, datang di jam yang kamu pilih. Tidak perlu buang waktu menunggu.</p>
+        </div>
+
+        <div class="flex flex-col items-center text-center p-8 rounded-3xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-colors">
+          <div class="w-16 h-16 rounded-2xl bg-zinc-950 border border-zinc-800 flex items-center justify-center mb-6 text-red-500 shadow-inner">
+            <i data-lucide="star" class="w-8 h-8"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-3 text-white">Barber Profesional</h3>
+          <p class="text-zinc-400">Ditangani oleh kapster berpengalaman yang paham tren dan gaya rambut terkini.</p>
+        </div>
+
+        <div class="flex flex-col items-center text-center p-8 rounded-3xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-colors">
+          <div class="w-16 h-16 rounded-2xl bg-zinc-950 border border-zinc-800 flex items-center justify-center mb-6 text-red-500 shadow-inner">
+            <i data-lucide="shield-check" class="w-8 h-8"></i>
+          </div>
+          <h3 class="text-xl font-semibold mb-3 text-white">Cepat & Rapi</h3>
+          <p class="text-zinc-400">Peralatan steril, hasil potongan presisi. Kualitas premium dalam waktu efisien.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 3. BOOKING SECTION -->
+    <section id="booking-section" class="py-24 px-4">
+      <div class="max-w-3xl mx-auto">
+        
+        <div class="text-center mb-12">
+          <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">Buat Jadwal</h2>
+          <p class="text-zinc-400">Pilih waktu dan layanan yang kamu inginkan.</p>
+        </div>
+
+        <form id="booking-form" class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-10 shadow-2xl relative overflow-hidden">
+          
+          <div class="space-y-10 relative z-10">
+            
+            <!-- Jadwal Section -->
+            <div class="space-y-6">
+              <h3 class="text-xl font-semibold flex items-center gap-3 text-white border-b border-zinc-800/50 pb-4">
+                <span class="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/10 text-red-500 text-sm">1</span>
+                Tentukan Waktu
+              </h3>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Tanggal -->
+                <div class="space-y-3">
+                  <label for="date-input" class="block text-sm font-medium text-zinc-400 flex items-center gap-2">
+                    <i data-lucide="calendar" class="w-4 h-4"></i> Tanggal Booking
+                  </label>
+                  <input 
+                    type="date" 
+                    id="date-input"
+                    class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-4 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all [color-scheme:dark]"
+                    required
+                  />
+                </div>
+              </div>
+
+              <!-- Jam -->
+              <div class="space-y-3 pt-2">
+                <label class="block text-sm font-medium text-zinc-400 flex items-center gap-2">
+                  <i data-lucide="clock" class="w-4 h-4"></i> Pilih Jam
+                </label>
+                
+                <div id="time-slots-container" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                  <!-- Slot jam akan di-generate via JavaScript -->
+                  <div class="col-span-full py-4 text-center text-zinc-500 text-sm">
+                    Silakan pilih tanggal terlebih dahulu
+                  </div>
+                </div>
+
+                <div class="flex flex-wrap gap-4 text-xs text-zinc-500 mt-4 px-1">
+                  <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded bg-zinc-950 border border-zinc-800"></div> Tersedia</div>
+                  <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded bg-red-600"></div> Dipilih</div>
+                  <div class="flex items-center gap-2"><div class="w-2.5 h-2.5 rounded bg-zinc-950 border border-zinc-800/30 opacity-50"></div> Full</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Data Diri Section -->
+            <div class="space-y-6">
+              <h3 class="text-xl font-semibold flex items-center gap-3 text-white border-b border-zinc-800/50 pb-4">
+                <span class="flex items-center justify-center w-8 h-8 rounded-full bg-red-500/10 text-red-500 text-sm">2</span>
+                Data Diri & Layanan
+              </h3>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="space-y-3">
+                  <label for="name-input" class="block text-sm font-medium text-zinc-400">Nama Lengkap</label>
+                  <input 
+                    type="text" 
+                    id="name-input"
+                    placeholder="Masukkan nama"
+                    class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-4 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                    required
+                  />
+                </div>
+
+                <div class="space-y-3">
+                  <label for="age-input" class="block text-sm font-medium text-zinc-400">Umur</label>
+                  <input 
+                    type="number" 
+                    id="age-input"
+                    min="0"
+                    placeholder="contoh: 25"
+                    class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-4 text-zinc-100 placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                    required
+                  />
+                </div>
+
+                <div class="space-y-3 md:col-span-2">
+                  <label for="service-input" class="block text-sm font-medium text-zinc-400 flex items-center gap-2">
+                    <i data-lucide="clipboard-list" class="w-4 h-4"></i> Jenis Layanan
+                  </label>
+                  <div class="relative">
+                    <select 
+                      id="service-input"
+                      class="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-4 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all appearance-none pr-10"
+                      required
+                    >
+                      <option value="Cukur Rambut">Cukur Rambut</option>
+                      <option value="Cukur Jenggot">Cukur Jenggot</option>
+                      <option value="Paket Lengkap">Paket Lengkap (Rambut + Jenggot + Pijat)</option>
+                    </select>
+                    <i data-lucide="chevron-down" class="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none w-5 h-5"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-6">
+              <button 
+                type="submit"
+                id="btn-submit"
+                class="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold py-5 px-6 rounded-xl transition-all duration-300 transform hover:-translate-y-1 hover:shadow-[0_15px_30px_rgba(220,38,38,0.25)] disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                <i data-lucide="check-circle" class="w-5 h-5"></i>
+                <span id="btn-text">Selesaikan Booking</span>
+              </button>
+            </div>
+          </div>
+        </form>
+        
+      </div>
+    </section>
+
+    <footer class="py-8 text-center border-t border-zinc-900 text-zinc-500 text-sm">
+      <p>&copy; <span id="year"></span> Barbershop. All rights reserved.</p>
+    </footer>
+
+    <!-- App Logic menggunakan Type Module untuk Integrasi CDN Firebase -->
+    <!-- Script ini dibuat di index.html untuk mempermudah. Jika ingin, script ini bisa dipindah ke main.js -->
+    <script type="module">
+      // Inisialisasi Icons
+      lucide.createIcons();
+      document.getElementById('year').textContent = new Date().getFullYear();
+
+      // Smooth scroll button
+      document.getElementById('btn-scroll-booking').addEventListener('click', () => {
+        document.getElementById('booking-section').scrollIntoView({ behavior: 'smooth' });
+      });
+
+      // =========================================================================
+      // 1. Inisialisasi Firebase Web SDK (ES Modules, CDN) Tanpa Framework
+      // =========================================================================
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+      import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+
+      // Config Firebase
+      const firebaseConfig = {
+        apiKey: "AIzaSyAlZghS6NN_2fD36c2uMdPDr8VPVOP_aOQ",
+        authDomain: "baber-booking-1.firebaseapp.com",
+        projectId: "baber-booking-1",
+        storageBucket: "baber-booking-1.firebasestorage.app",
+        messagingSenderId: "417634798927",
+        appId: "1:417634798927:web:cfd41891cda71ac841093a",
+        measurementId: "G-GMV0KGVNZV"
+      };
+
+      // initFirebase
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+
+      // =========================================================================
+      // 2. Global State Variable
+      // =========================================================================
+      let selectedTime = null;
+      let bookedSlots = [];
+
+      // Element DOM
+      const dateInput = document.getElementById('date-input');
+      const timeSlotsContainer = document.getElementById('time-slots-container');
+      const bookingForm = document.getElementById('booking-form');
+      const btnSubmit = document.getElementById('btn-submit');
+      const btnText = document.getElementById('btn-text');
+
+      // Set min date hari ini
+      const today = new Date().toISOString().split('T')[0];
+      dateInput.min = today;
+
+      // =========================================================================
+      // 3. System Functions
+      // =========================================================================
+
+      // generateTimeSlots: Buat array berisi jam 10:00 - 20:00 (interval 30 mins)
+      const generateTimeSlots = () => {
+        const slots = [];
+        for (let h = 10; h <= 19; h++) {
+          slots.push(`${h}:00`);
+          slots.push(`${h}:30`);
+        }
+        slots.push('20:00');
+        return slots;
+      };
+
+      // getBookedSlots: Ambil slot jam yang sudah di-booking pada tgl tertentu
+      const getBookedSlots = async (date) => {
+        if (!date) return [];
+        try {
+          const bookingsRef = collection(db, 'bookings');
+          const q = query(bookingsRef, where('date', '==', date));
+          const querySnapshot = await getDocs(q);
+          
+          const bookedTime = [];
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            if (data.time) bookedTime.push(data.time);
+          });
+          return bookedTime;
+        } catch (error) {
+          console.error("Gagal mengambil data booking:", error);
+          return [];
+        }
+      };
+
+      // renderTimeSlots: Tampilkan grid waktu ke DOM
+      const renderTimeSlots = (baseSlots, bookedSlots) => {
+        timeSlotsContainer.innerHTML = '';
+        
+        if (baseSlots.length === 0) {
+          timeSlotsContainer.innerHTML = '<div class="col-span-full py-4 text-center text-zinc-500 text-sm">Silakan pilih tanggal terlebih dahulu</div>';
+          return;
+        }
+
+        baseSlots.forEach((slot) => {
+          const isFull = bookedSlots.includes(slot);
+          
+          // Buat button DOM
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = slot;
+          button.dataset.time = slot; // Simpan nilai waktu untuk data attribute
+          
+          // Terapkan class sesuai state
+          button.className = `slot-btn py-3 rounded-xl text-sm font-medium border text-center select-none ${isFull ? 'full' : 'available'}`;
+          
+          // Set atribut Disabled jika penuh
+          if (isFull) {
+            button.disabled = true;
+          } else {
+            // Event Listener Click untuk memilih jam
+            button.addEventListener('click', () => {
+              // Hapus bg merah dari slot sebelumnya
+              const allButtons = timeSlotsContainer.querySelectorAll('button');
+              allButtons.forEach(btn => btn.classList.remove('selected'));
+              
+              // Set bg merah ke slot yang diklik
+              button.classList.add('selected');
+              selectedTime = slot; // Simpan pilihan jam ke state
+            });
+            
+            // Re-apply style jika ini adalah slot yang sebelumnya dipilih (tapi belum dibooking orang)
+            if (selectedTime === slot) {
+              button.classList.add('selected');
+            }
+          }
+
+          timeSlotsContainer.appendChild(button);
+        });
+      };
+
+      // =========================================================================
+      // 4. Event Listeners
+      // =========================================================================
+
+      // Saat Tanggal Berubah -> Ambil data & update UI slot
+      dateInput.addEventListener('change', async (e) => {
+        const selectedDate = e.target.value;
+        if (!selectedDate) return;
+
+        // Tampilkan loading saat fetch Firestore
+        timeSlotsContainer.innerHTML = '<div class="col-span-full py-4 text-center text-zinc-500 text-sm">Memuat ketersediaan jam...</div>';
+        
+        // Reset waktu yang dipilih jika user mengubah tanggal
+        selectedTime = null;
+
+        const baseSlots = generateTimeSlots(); // 10:00 - 20:00
+        bookedSlots = await getBookedSlots(selectedDate); // Ambil dari Firestore
+        
+        // Update Grid Jam
+        renderTimeSlots(baseSlots, bookedSlots);
+      });
+
+      // handleBooking: Event Submit Form
+      bookingForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Validasi Ekstra dari script (untuk field 'time' yang bukan input natif)
+        if (!selectedTime) {
+          alert('⚠️ Silakan pilih jam terlebih dahulu sebelum klik submit!');
+          return;
+        }
+
+        // Ambil Data dari input form
+        const bookingData = {
+          name: document.getElementById('name-input').value,
+          age: document.getElementById('age-input').value,
+          service: document.getElementById('service-input').value,
+          date: dateInput.value,
+          time: selectedTime,
+        };
+
+        try {
+          // Set Loading State di Tombol
+          btnSubmit.disabled = true;
+          btnText.textContent = "Memproses Booking...";
+
+          const bookingsRef = collection(db, 'bookings');
+          
+          // Validasi Double Booking untuk mencegah bentrok jadwal pada detik yang sama
+          const q = query(
+            bookingsRef, 
+            where('date', '==', bookingData.date),
+            where('time', '==', bookingData.time)
+          );
+          const querySnapshot = await getDocs(q);
+          
+          if (!querySnapshot.empty) {
+            alert("Maaf, slot jam ini baru saja dibooking oleh orang lain. Silakan pilih jam lain.");
+            // Refresh slot karena sudah dibooking
+            bookedSlots = await getBookedSlots(bookingData.date);
+            selectedTime = null;
+            renderTimeSlots(generateTimeSlots(), bookedSlots);
+            return;
+          }
+
+          // Simpan Data
+          await addDoc(bookingsRef, {
+            ...bookingData,
+            status: "confirmed",
+            createdAt: serverTimestamp()
+          });
+
+          // Sukses
+          alert(`✅ Booking berhasil!\n\nNama: ${bookingData.name}\nUmur: ${bookingData.age}\nLayanan: ${bookingData.service}\nTanggal: ${bookingData.date}\nJam: ${bookingData.time}`);
+          
+          // Reset UI & Form
+          bookingForm.reset();
+          selectedTime = null;
+          timeSlotsContainer.innerHTML = '<div class="col-span-full py-4 text-center text-zinc-500 text-sm">Silakan pilih tanggal terlebih dahulu</div>';
+
+        } catch (error) {
+          console.error("Error booking:", error);
+          alert(error.message || "Gagal melakukan booking. Silakan periksa koneksi dan coba lagi.");
+        } finally {
+          // Kembalikan Tombol seperti semula
+          btnSubmit.disabled = false;
+          btnText.textContent = "Selesaikan Booking";
+        }
+      });
+    </script>
+  </body>
+</html>
+

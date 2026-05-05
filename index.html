@@ -220,12 +220,48 @@
       </div>
     </section>
 
-    <footer class="py-8 text-center border-t border-zinc-900 text-zinc-500 text-sm">
+    <!-- 4. ADMIN / DATA BOOKING SECTION -->
+    <section id="admin-section" class="py-24 px-4 bg-zinc-900 border-t border-zinc-800">
+      <div class="max-w-5xl mx-auto">
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
+          <div>
+            <h2 class="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
+              <i data-lucide="database" class="text-red-500"></i> Data Booking Masuk
+            </h2>
+            <p class="text-zinc-400 text-sm mt-1">Ini adalah data hasil input yang tersimpan di Firestore.</p>
+          </div>
+          <button id="btn-refresh" class="flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-4 py-2.5 rounded-xl transition-colors text-sm font-medium border border-zinc-700">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh Data
+          </button>
+        </div>
+        
+        <div class="bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse min-w-[600px]">
+              <thead>
+                <tr class="bg-zinc-900 border-b border-zinc-800 text-zinc-300 text-sm">
+                  <th class="p-4 font-semibold whitespace-nowrap">Nama & Umur</th>
+                  <th class="p-4 font-semibold whitespace-nowrap">Layanan</th>
+                  <th class="p-4 font-semibold whitespace-nowrap">Jadwal</th>
+                  <th class="p-4 font-semibold whitespace-nowrap">Status</th>
+                </tr>
+              </thead>
+              <tbody id="booking-list" class="divide-y divide-zinc-800/50">
+                <tr>
+                  <td colspan="4" class="p-8 text-center text-zinc-500">Memuat data dari database...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="py-8 text-center border-t border-zinc-900 bg-zinc-950 text-zinc-500 text-sm">
       <p>&copy; <span id="year"></span> Barbershop. All rights reserved.</p>
     </footer>
 
     <!-- App Logic menggunakan Type Module untuk Integrasi CDN Firebase -->
-    <!-- Script ini dibuat di index.html untuk mempermudah. Jika ingin, script ini bisa dipindah ke main.js -->
     <script type="module">
       // Inisialisasi Icons
       lucide.createIcons();
@@ -237,7 +273,7 @@
       });
 
       // =========================================================================
-      // 1. Inisialisasi Firebase Web SDK (ES Modules, CDN) Tanpa Framework
+      // 1. Inisialisasi Firebase Web SDK (ES Modules, CDN)
       // =========================================================================
       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
       import { getFirestore, collection, addDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
@@ -258,27 +294,31 @@
       const db = getFirestore(app);
 
       // =========================================================================
-      // 2. Global State Variable
+      // 2. Global State & DOM Element
       // =========================================================================
       let selectedTime = null;
       let bookedSlots = [];
 
-      // Element DOM
+      // Element Booking
       const dateInput = document.getElementById('date-input');
       const timeSlotsContainer = document.getElementById('time-slots-container');
       const bookingForm = document.getElementById('booking-form');
       const btnSubmit = document.getElementById('btn-submit');
       const btnText = document.getElementById('btn-text');
+      
+      // Element Admin (Daftar Booking)
+      const bookingListContainer = document.getElementById('booking-list');
+      const btnRefresh = document.getElementById('btn-refresh');
 
       // Set min date hari ini
       const today = new Date().toISOString().split('T')[0];
       dateInput.min = today;
 
       // =========================================================================
-      // 3. System Functions
+      // 3. System Functions (Fetch, Render)
       // =========================================================================
 
-      // generateTimeSlots: Buat array berisi jam 10:00 - 20:00 (interval 30 mins)
+      // generateTimeSlots
       const generateTimeSlots = () => {
         const slots = [];
         for (let h = 10; h <= 19; h++) {
@@ -289,7 +329,7 @@
         return slots;
       };
 
-      // getBookedSlots: Ambil slot jam yang sudah di-booking pada tgl tertentu
+      // getBookedSlots (untuk mengecek slot yang penuh pada tanggal tertentu)
       const getBookedSlots = async (date) => {
         if (!date) return [];
         try {
@@ -304,12 +344,77 @@
           });
           return bookedTime;
         } catch (error) {
-          console.error("Gagal mengambil data booking:", error);
+          console.error("Gagal mengambil data slot booking:", error);
           return [];
         }
       };
 
-      // renderTimeSlots: Tampilkan grid waktu ke DOM
+      // fetchAllBookings (Menampilkan semua data di tabel admin bawah)
+      const fetchAllBookings = async () => {
+        try {
+          bookingListContainer.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-zinc-500"><i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2 text-red-500"></i> Memuat data...</td></tr>';
+          lucide.createIcons();
+
+          const bookingsRef = collection(db, 'bookings');
+          const querySnapshot = await getDocs(bookingsRef);
+          
+          let allBookings = [];
+          querySnapshot.forEach((doc) => {
+            allBookings.push({ id: doc.id, ...doc.data() });
+          });
+
+          // Urutkan List (Data terbaru dulu beradasarkan Tanggal lalu Jam)
+          allBookings.sort((a, b) => {
+            if (a.date === b.date) {
+               return b.time.localeCompare(a.time); 
+            }
+            return new Date(b.date) - new Date(a.date);
+          });
+
+          if (allBookings.length === 0) {
+            bookingListContainer.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-zinc-500">Belum ada booking yang masuk tersimpan di database.</td></tr>';
+            return;
+          }
+
+          bookingListContainer.innerHTML = '';
+          allBookings.forEach(booking => {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-zinc-900/50 transition-colors";
+            
+            // Format Tanggal
+            const dateObj = new Date(booking.date);
+            const dateFormatted = dateObj.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+            tr.innerHTML = `
+              <td class="p-4">
+                <div class="font-medium text-zinc-200 capitalize">${booking.name}</div>
+                <div class="text-xs text-zinc-500">${booking.age} Tahun</div>
+              </td>
+              <td class="p-4">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-800 text-zinc-300 border border-zinc-700">
+                  ${booking.service}
+                </span>
+              </td>
+              <td class="p-4">
+                <div class="font-medium text-red-400">${booking.time}</div>
+                <div class="text-xs text-zinc-500">${dateFormatted}</div>
+              </td>
+              <td class="p-4">
+                <div class="flex items-center gap-1.5 text-xs text-emerald-500">
+                  <div class="w-2 h-2 rounded-full bg-emerald-500"></div> Sukses
+                </div>
+              </td>
+            `;
+            bookingListContainer.appendChild(tr);
+          });
+        } catch (error) {
+          console.error("Gagal memuat list booking:", error);
+          bookingListContainer.innerHTML = '<tr><td colspan="4" class="p-8 text-center text-red-500"><i data-lucide="alert-circle" class="w-6 h-6 mx-auto mb-2"></i> Gagal mengambil data dari database.<br/>Pastikan Database Firestore sudah disetting dan mode percobaan (test mode) aktif.</td></tr>';
+          lucide.createIcons();
+        }
+      };
+
+      // renderTimeSlots: Render HTML UI Grid Slot Waktu
       const renderTimeSlots = (baseSlots, bookedSlots) => {
         timeSlotsContainer.innerHTML = '';
         
@@ -321,31 +426,24 @@
         baseSlots.forEach((slot) => {
           const isFull = bookedSlots.includes(slot);
           
-          // Buat button DOM
           const button = document.createElement('button');
           button.type = 'button';
           button.textContent = slot;
-          button.dataset.time = slot; // Simpan nilai waktu untuk data attribute
+          button.dataset.time = slot; 
           
-          // Terapkan class sesuai state
           button.className = `slot-btn py-3 rounded-xl text-sm font-medium border text-center select-none ${isFull ? 'full' : 'available'}`;
           
-          // Set atribut Disabled jika penuh
           if (isFull) {
             button.disabled = true;
           } else {
-            // Event Listener Click untuk memilih jam
             button.addEventListener('click', () => {
-              // Hapus bg merah dari slot sebelumnya
               const allButtons = timeSlotsContainer.querySelectorAll('button');
               allButtons.forEach(btn => btn.classList.remove('selected'));
               
-              // Set bg merah ke slot yang diklik
               button.classList.add('selected');
-              selectedTime = slot; // Simpan pilihan jam ke state
+              selectedTime = slot; 
             });
             
-            // Re-apply style jika ini adalah slot yang sebelumnya dipilih (tapi belum dibooking orang)
             if (selectedTime === slot) {
               button.classList.add('selected');
             }
@@ -356,38 +454,38 @@
       };
 
       // =========================================================================
-      // 4. Event Listeners
+      // 4. Initial Load & Event Listeners
       // =========================================================================
+      
+      // Load data tabel saat script pertama dijalankan
+      fetchAllBookings();
 
-      // Saat Tanggal Berubah -> Ambil data & update UI slot
+      // Refresh Button
+      btnRefresh.addEventListener('click', fetchAllBookings);
+
+      // Listener Input Tanggal Diubah
       dateInput.addEventListener('change', async (e) => {
         const selectedDate = e.target.value;
         if (!selectedDate) return;
 
-        // Tampilkan loading saat fetch Firestore
         timeSlotsContainer.innerHTML = '<div class="col-span-full py-4 text-center text-zinc-500 text-sm">Memuat ketersediaan jam...</div>';
-        
-        // Reset waktu yang dipilih jika user mengubah tanggal
         selectedTime = null;
 
-        const baseSlots = generateTimeSlots(); // 10:00 - 20:00
-        bookedSlots = await getBookedSlots(selectedDate); // Ambil dari Firestore
+        const baseSlots = generateTimeSlots(); 
+        bookedSlots = await getBookedSlots(selectedDate); 
         
-        // Update Grid Jam
         renderTimeSlots(baseSlots, bookedSlots);
       });
 
-      // handleBooking: Event Submit Form
+      // Submit Form Booking
       bookingForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        // Validasi Ekstra dari script (untuk field 'time' yang bukan input natif)
         if (!selectedTime) {
           alert('⚠️ Silakan pilih jam terlebih dahulu sebelum klik submit!');
           return;
         }
 
-        // Ambil Data dari input form
         const bookingData = {
           name: document.getElementById('name-input').value,
           age: document.getElementById('age-input').value,
@@ -397,13 +495,12 @@
         };
 
         try {
-          // Set Loading State di Tombol
           btnSubmit.disabled = true;
           btnText.textContent = "Memproses Booking...";
 
           const bookingsRef = collection(db, 'bookings');
           
-          // Validasi Double Booking untuk mencegah bentrok jadwal pada detik yang sama
+          // Cek double booking
           const q = query(
             bookingsRef, 
             where('date', '==', bookingData.date),
@@ -413,33 +510,34 @@
           
           if (!querySnapshot.empty) {
             alert("Maaf, slot jam ini baru saja dibooking oleh orang lain. Silakan pilih jam lain.");
-            // Refresh slot karena sudah dibooking
             bookedSlots = await getBookedSlots(bookingData.date);
             selectedTime = null;
             renderTimeSlots(generateTimeSlots(), bookedSlots);
             return;
           }
 
-          // Simpan Data
+          // Simpan data
           await addDoc(bookingsRef, {
             ...bookingData,
             status: "confirmed",
             createdAt: serverTimestamp()
           });
 
-          // Sukses
-          alert(`✅ Booking berhasil!\n\nNama: ${bookingData.name}\nUmur: ${bookingData.age}\nLayanan: ${bookingData.service}\nTanggal: ${bookingData.date}\nJam: ${bookingData.time}`);
+          // Alert sukses
+          alert(`✅ Booking berhasil!\n\nNama: ${bookingData.name}\nLayanan: ${bookingData.service}\nTanggal: ${bookingData.date}\nJam: ${bookingData.time}`);
           
-          // Reset UI & Form
+          // Reset UI
           bookingForm.reset();
           selectedTime = null;
           timeSlotsContainer.innerHTML = '<div class="col-span-full py-4 text-center text-zinc-500 text-sm">Silakan pilih tanggal terlebih dahulu</div>';
+          
+          // Refresh tabel admin
+          fetchAllBookings();
 
         } catch (error) {
           console.error("Error booking:", error);
           alert(error.message || "Gagal melakukan booking. Silakan periksa koneksi dan coba lagi.");
         } finally {
-          // Kembalikan Tombol seperti semula
           btnSubmit.disabled = false;
           btnText.textContent = "Selesaikan Booking";
         }
